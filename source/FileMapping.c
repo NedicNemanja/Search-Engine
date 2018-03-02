@@ -79,10 +79,9 @@ void MapAndTrie(int* DSizes, FILE* fp){
                                       the string without the \n.*/
     //break the document into words
     char* word;
-    const char delimeter[2] = " ";
     int offset=0;
     do{ //for every word in the document
-      word = strtok(DMAP.map[i]+offset, delimeter);
+      word = strtok(DMAP.map[i]+offset, " ");
       if(word != NULL){
         //TrieInsert(word);
         printf("word:%s\n", word);
