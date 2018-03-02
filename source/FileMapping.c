@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "FileMapping.h"
 #include "ErrorCodes.h"
 
@@ -55,12 +56,12 @@ ERRORCODE ScanFile(FILE* fp, int** DSizesptr){
 
 void MapAndTrie(int* DSizes, FILE* fp){
   int temp;
-  //allocate a pointer for each document
+  //allocate a pointer in the map for each document
   DMAP.map = malloc(sizeof(char*)*DMAP.size);
   NULL_Check(DMAP.map);
-  //allocate memory for each document
+
   for(int i=0; i<DMAP.size; i++){ //for every document
-    //allocate space for the document
+    //allocate memory in the map for the document
     DMAP.map[i] = malloc(sizeof(char)*(DSizes[i]+1)); //+1 for terminating char
     NULL_Check(DMAP.map);
     //ignore the document index and the space after it
@@ -76,8 +77,19 @@ void MapAndTrie(int* DSizes, FILE* fp){
                                       at the \n. But it wont be saved to the map
                                       because we only allocated just enough for
                                       the string without the \n.*/
-
-    printf("Size %d:%s\n", DSizes[i],DMAP.map[i]);
+    //break the document into words
+    char* word;
+    const char delimeter[2] = " ";
+    int offset=0;
+    do{ //for every word in the document
+      word = strtok(DMAP.map[i]+offset, delimeter);
+      if(word != NULL){
+        //TrieInsert(word);
+        printf("word:%s\n", word);
+        offset += strlen(word)+1;
+      }
+    }while(word != NULL);
+    printf("----------------------new document------------\n");
   }
 }
 
