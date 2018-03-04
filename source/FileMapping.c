@@ -3,18 +3,8 @@
 #include <string.h>
 #include "FileMapping.h"
 #include "ErrorCodes.h"
-
-/*ignore and count every char in fstream until \n or EOF*/
-char GoToEndOfline(FILE* fp, int* DSize){
-  char c = fgetc(fp);	//ignore the space between index and 1sr word
-  while(c != '\n' && c!=EOF){
-    c=fgetc(fp);
-    if(c!='\n' && c!=EOF)
-      (*DSize)++;
-  }
-  return c;
-}
-
+#include "StringManipulation.h"
+//#include "Trie.h"
 
 /*Check if the file is sorted and learn the size of each document.*/
 ERRORCODE ScanFile(FILE* fp, int** DSizesptr){
@@ -78,14 +68,14 @@ void MapAndTrie(int* DSizes, FILE* fp){
                                       because we only allocated just enough for
                                       the string without the \n.*/
     //break the document into words
-    char* word;
-    int offset=0;
+    int offset=0,word_size;
+    char* word = NULL;
     do{ //for every word in the document
-      word = strtok(DMAP.map[i]+offset, " ");
+      word = getNextWord(DMAP.map[i],&offset,&word_size);
       if(word != NULL){
         //TrieInsert(word);
         printf("word:%s\n", word);
-        offset += strlen(word)+1;
+        printf("document:%s\n", DMAP.map[i]);
       }
     }while(word != NULL);
     printf("----------------------new document------------\n");

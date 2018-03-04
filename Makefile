@@ -6,11 +6,11 @@ CC = gcc
 CFLAGS=-g -I$(INCLUDE_DIR)
 OUT = minisearch
 
-_DEPS = Arguments.h ErrorCodes.h FileMapping.h
+_DEPS = Arguments.h ErrorCodes.h FileMapping.h StringManipulation.h
 #pattern matching from  _DEPS to include directory
 DEPS = $(patsubst %,$(INCLUDE_DIR)/%,$(_DEPS))
 
-_OBJ = main.o Arguments.o FileMapping.o
+_OBJ = main.o Arguments.o FileMapping.o StringManipulation.o
 #same pattern matching principe
 OBJ = $(patsubst %,$(OBJECT_DIR)/%,$(_OBJ))
 
