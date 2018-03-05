@@ -1,3 +1,5 @@
+#ifndef FILEMAPPING_H
+#define FILEMAPPING_H
 
 //all the documents are kept here, indexing is the same as in the input file
 typedef struct DocumentMAP{
@@ -7,4 +9,6 @@ typedef struct DocumentMAP{
 
 DocumentMAP DMAP;
 
-int MapFile(char* docfilename);
+int MapAndTrie(char* docfilename);
+
+#endif

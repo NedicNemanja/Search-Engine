@@ -1,3 +1,6 @@
+#ifndef ARGUMENTS_H
+#define ARGUMENTS_H
+
 char* docfilename;  //filename of file containing the documents
 int K;              //max number of relevant queries to return
 
@@ -6,3 +9,5 @@ int K;              //max number of relevant queries to return
 and store them in the variables above^.
 If all goes well return will be 0.*/
 int ReadArguments(int argc, char* argv[]);
+
+#endif

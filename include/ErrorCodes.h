@@ -1,3 +1,6 @@
+#ifndef ERRORCODES_H
+#define ERRORCODES_H
+
 #include <stdlib.h>
 
 typedef enum ERRORCODE { OK=0,
@@ -13,3 +16,5 @@ typedef enum ERRORCODE { OK=0,
 #define NULL_Check(ptr) if(ptr == NULL) {fprintf(stderr, "Malloc/Realloc failed %s:%d\n", __FILE__, __LINE__); exit(ALLOCATION_FAIL);}
 
 #define CALL_OR_DIE(err_code) if(err_code != OK) {fprintf(stderr, "Exiting on ErrorCode: %d", err_code) exit(err_code)};
+
+#endif
