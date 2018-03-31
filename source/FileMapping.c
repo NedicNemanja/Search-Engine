@@ -1,37 +1,46 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "FileMapping.h"
 #include "ErrorCodes.h"
 #include "StringManipulation.h"
-//#include "Trie.h"
+#include "ReallocDocument.h"
+#include "Trie.h"
 
-int MEDIAN_DOC_SIZE = 5; /*median size of a document in characters without
+
+//This is our MAP
+DocumentMAP DMAP = { 0, NULL, NULL};
+
+int FILE_SIZE = 0;      /*total count of all doc sizes in the file
+                          i.e not counting index. We use this to keep the
+                          MEAN_DOC_SIZE up to date.*/
+int MEAN_DOC_SIZE = 5;  /*mean size of a document in characters without
                           the index and \0. Consecutive whitespace counts as
                           1 character.*/
+int WORDS_IN_FILE = 0;  /*total num of wrods in file.*/
 
-int MapAndTrie(char* docfilename){
-  //open file for reading
-  FILE* fp = fopen(docfilename, "r");
-  if(!fp){
-    fprintf(stderr,"Can't open file %s", docfilename);
-    return CANT_OPEN_FILE;
-  }
-  DMAP.size = 0;
 
+
+
+/************************Reading file to create Map and Trie*******************/
+
+int MapAndTrie(FILE* fp){
   char c;
-  //read the file
   do{ //for every document
+    /********************check indexing****************************************/
     int doc_index;
-    //read doc_index
     int temp = fscanf(fp,"%d",&doc_index);
     if( temp == 0){ //if the line is unindexed
       fprintf(stderr,"Unindexed line %d\n", doc_index+1);
-      fclose(fp);
+      //free initalized space
+      FreeTrie(TrieRoot);
+      TrieRoot = NULL;
+      FreeList(PLIST.next);
+      PLIST.next = NULL;
+      FreeMap();
       return UNINDEXED_LINE;
     }
     else if(temp == -1){  //if fscanf found EOF
-      fclose(fp);
       break;
     }
     //check if its sorted
@@ -39,45 +48,146 @@ int MapAndTrie(char* docfilename){
       fprintf(stderr, "Documents inside file and not sorted."
                       "Expected document %d, got document %d.\n"
                       ,DMAP.size,doc_index);
-      fclose(fp);
+      //free initalized space
+      FreeTrie(TrieRoot);
+      TrieRoot = NULL;
+      FreeList(PLIST.next);
+      PLIST.next = NULL;
+      FreeMap();
       return UNORDERED_DOCUMENTS;
     }
-    /****index check passed****/
-    //resize the map
-    DMAP.size++;
-    DMAP.map = realloc(DMAP.map,sizeof(char*)*DMAP.size);
-    NULL_Check(DMAP.map);
-    //allocate space for this document in the map
-    int doc_size = MEDIAN_DOC_SIZE;  //this one is the total doc size
-    DMAP.map[doc_index] = malloc(sizeof(char)*(doc_size +1)); //+1 for the \0
-    NULL_Check(DMAP.map[doc_index]);
+    /*********index check passed****add a new document to the map**************/
+    int doc_size = MEAN_DOC_SIZE;
+    NewDocument(doc_size);
     int char_index = -1;
-    //read the document word by word
+
+    //read the document word by word and store it
     do{
-      //find where the word starts
+      //skip until the word starts
       c = SkipWhitespace(fp);
-      char_index++;
-      if(c != '\n' && c != EOF){  //if you found a word
+      if(c != '\n' && c != EOF){  //if you found a word (doc not empty)
+        char_index++;
         int word_start = char_index;
         //append the word to the document (increase doc_size if needed)
         AddWord(fp,&(DMAP.map[doc_index]),&doc_size,&char_index,&c);
+        DMAP.doc_lenght[doc_index]++;
+        WORDS_IN_FILE++;
+        //initialize the word you just got
+        Word* word = CreateWord(doc_index,          //word->doc_id
+                                char_index-word_start,  //word->size
+                                word_start);        //word->start
+        //insert the word to the Trie
+        int ignore;
+        TrieRoot = TrieInsert(TrieRoot, word, 1, &ignore);
+        //add a space after the word in the document
+        //(the last space is overridden by \0 anyway)
         DMAP.map[doc_index][char_index] = ' ';
-        int word_size = char_index - word_start;
-        //TrieInsert(DMAP.map[d],word_start,word_size);
+        free(word);
       }
     }while(c != '\n' && c != EOF);
-    DMAP.map[doc_index][char_index] = '\0';
-    printf("document: %s\n", DMAP.map[doc_index]);
+
+    /****************document added***cleanup*********************************/
     //most likely there will be more space allocated than needed for a document
-    //ResizeDocument(doc_size,char_index);
-    printf("--------------------------------------------\n");
+    if(char_index == -1){
+      //empty documents need no space and are marked as NULL in the map
+      free(DMAP.map[doc_index]);
+      DMAP.map[doc_index] = NULL;
+      UpdateMEAN_DOC_SIZE(0);
+    }
+    else{
+      DMAP.map[doc_index][char_index] = '\0'; //terminate the document
+      if(char_index < doc_size){  //check if the size is precise, if not resize
+        DMAP.map[doc_index] = ResizeDocument(DMAP.map[doc_index],char_index);
+        NULL_Check(DMAP.map[doc_index]);
+        UpdateMEAN_DOC_SIZE(char_index);
+      }
+    }
   }while(c != EOF);
+
   return OK;
+}
+
+/*******************************************************************************
+**************************Utility FUnctions for MapAndTrie**********************
+********************************************************************************/
+void UpdateMEAN_DOC_SIZE(int new_doc_size){
+  FILE_SIZE += new_doc_size;
+  MEAN_DOC_SIZE = ceil((double)FILE_SIZE/DMAP.size);
+}
+
+/*Read a stream of char from fp, and append them to the doc string until you find
+whitespace,newline or EOF.
+That last argument is valuable, its the first char we append.
+While appending characters to the doc string,you might get out of its boundaries.
+ReallocDocument() is used to resize our document and update the doc pointer in
+the DMAP.*/
+void AddWord(FILE* fp, char** doc_ptr, int* doc_size, int* char_index, char* c){
+  char* doc = *doc_ptr;
+  //while the word has not ended
+  while(*c != ' ' && *c != '\t' && *c != '\n' && *c != EOF){
+    //make document bigger if needed
+    if(*char_index > *doc_size-2){
+      *doc_ptr = ReallocDocument(doc,doc_size);
+      NULL_Check(*doc_ptr);
+      doc = *doc_ptr;
+      NULL_Check(doc_ptr);
+    }
+    doc[*char_index] = *c;
+    (*char_index)++;
+    *c = fgetc(fp);
+  }
+}
+
+void PrintMAP(){
+  printf("*****************Printing the DMAP*********************\n");
+  for(int i=0; i<DMAP.size; i++){
+    if(DMAP.map[i] == NULL)
+      printf("(size:0)%d", i);
+    else
+      printf("(size:%d)%d %s", (int)strlen(DMAP.map[i]),i,DMAP.map[i]);
+    printf("\n");
+  }
+}
+
+/*****************DocumentMAP members*****************************************/
+/*Make a new slot in the map for a new document. Allocate space for it.*/
+void NewDocument(int doc_size){
+  int doc_index = DMAP.size;
+  //resize the map
+  DMAP.size++;
+  DMAP.map = realloc(DMAP.map,sizeof(char*)*DMAP.size);
+  NULL_Check(DMAP.map);
+  //resize the doc_lenght array as well
+  DMAP.doc_lenght = realloc(DMAP.doc_lenght,sizeof(int)*DMAP.size);
+  DMAP.doc_lenght[doc_index] = 0;
+  //allocate space for this document in the map
+  DMAP.map[doc_index] = malloc(sizeof(char)*(doc_size +1)); //+1 for the \0
+  NULL_Check(DMAP.map[doc_index]);
+}
+
+void FreeMap(){
+  //free all the documents
+  for(int i=0; i<DMAP.size; i++){
+    if(DMAP.map[i] != NULL)
+      free(DMAP.map[i]);
+    DMAP.map[i] = NULL;
+  }
+  //free the array for keeping track of document lenghts
+  if(DMAP.doc_lenght != NULL){
+    free(DMAP.doc_lenght);
+    DMAP.doc_lenght = NULL;
+  }
+  //Free the map array where we kept the documents
+  if(DMAP.map != NULL){
+    free(DMAP.map);
+    DMAP.map = NULL;
+  }
 }
 
 /******************************************************************************
 ************************DIFFERENT APPROACH*************************************
-****************************************************************************
+*******************ScanFile first, then choose weather to continue*************
+****************************UNUSED*********************************************
 
 Check if the file is sorted and learn the size of each document.
 ERRORCODE ScanFile(FILE* fp, int** DSizesptr){

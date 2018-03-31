@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "StringManipulation.h"
 #include "ErrorCodes.h"
 #include "ReallocDocument.h"
+#include <sys/ioctl.h>
+#include "QuickSort.h"
 
 /*Skip whitespace and return the first non-whitespace char you find.*/
 char SkipWhitespace(FILE* fp){
@@ -12,28 +16,109 @@ char SkipWhitespace(FILE* fp){
   return c;
 }
 
-/*Read a stream of char from fp, and append them to the doc string until you find
-whitespace,newline or EOF.
-That last argument is valuable, its the first char we append.
-While appending characters to the doc string,you might get out of its boundaries.
-ReallocDocument() is used to resize our document and update the doc pointer in
-the DMAP.*/
-void AddWord(FILE* fp, char** doc_ptr, int* doc_size, int* char_index, char* c){
-  char* doc = *doc_ptr;
-  //while the word has not ended
-  while(*c != ' ' && *c != '\t' && *c != '\n' && *c != EOF){
-    //make document bigger if needed
-    if(*char_index >= *doc_size){
-      *doc_ptr = ReallocDocument(doc,doc_size);
-      doc = *doc_ptr;
-      NULL_Check(doc_ptr);
+
+void PrintDocumentToTerminal(char* doc, Highlight* Highlights,int numofHlights){
+  //get terminal window size
+  struct winsize w;
+  ioctl(fileno(stdout),TIOCGWINSZ,&w);
+
+  int gap = 23; //whitespace gap at the start of the line
+  int avl_columns = w.ws_col - gap; //calc the available columns for printing
+  int doc_size = strlen(doc);
+  int dindex = 0;  //index inside the document
+  int hindex = 0;  //index inside the highlight
+  int h=0;  //upcoming(next) highlight index
+  /*sometimes we ll stop a highlight before its finished,
+    what's left we ll carry to the next line.*/
+  int carry=0;
+
+  /*print the document in chunks of avl_col characters
+    and under every chunk show the highlight^^^^^^^^^^*/
+  //we need to sort the Highlights
+  QuickSortHighlights(Highlights,0,numofHlights-1);
+
+  PrintChars(doc,&dindex,avl_columns);
+  PrintWhitespace(gap);
+  carry = PrintHighlights(carry,&hindex,avl_columns-1,Highlights,&h,numofHlights);
+  while(dindex <= doc_size-1){
+    PrintWhitespace(gap);
+    PrintChars(doc,&dindex,avl_columns);
+    PrintWhitespace(gap);
+    carry = PrintHighlights(carry,&hindex,avl_columns-1, Highlights, &h, numofHlights);
+  }
+
+}
+
+int PrintHighlights(int carry, int* hindex, int line_end,
+                      Highlight* Hlights,int* h,int numofHlights){
+  int line_index = 0, hbase_index = *hindex;
+
+  //print carry of the last highlight
+  if(carry != 0){
+    while(carry>0){
+      if(line_index>line_end)
+        return carry;;
+      printf("^");
+      (*hindex)++;
+      line_index++;
+      carry--;
     }
-    doc[*char_index] = *c;
-    (*char_index)++;
-    *c = fgetc(fp);
+    (*h)++;
+  }
+
+  while(*h<=numofHlights-1){
+    //print whitespace until the next highlight or until end of line
+    while(hbase_index+line_index < Hlights[*h].start){
+      if(line_index>line_end)
+        return carry;
+      printf(" ");
+      (*hindex)++;
+      line_index++;
+    }
+    //then print the highlight
+    for(int i=0; i<Hlights[*h].size; i++){
+      if(line_index>line_end){
+        /*if we break a highlight in the middle
+        we must carry what remains to the next line*/
+        carry = Hlights[*h].size-i;
+        return carry;
+      }
+      printf("^");
+      (*hindex)++;
+      line_index++;
+    }
+    (*h)++;
+  }
+  //print whitespace after the highlights
+  while(line_index<=line_end){
+    printf(" ");
+    (*hindex)++;
+    line_index++;
+  }
+  return carry;
+}
+
+/*print n char of a doc string,
+return 1 if the string ends before chars are printed.*/
+void PrintChars(char* doc, int* index, int n){
+  for(int i=0; i<n; i++){
+    if(doc[(*index)] == '\0'){
+      //if you reach the end of document
+      //fill it with whitespace
+      for(int j=i; j<n; j++)
+        printf(" ");
+      return;
+    }
+    printf("%c", doc[(*index)]);
+    (*index)++;
   }
 }
 
+void PrintWhitespace(int n){
+  for(int i=0; i<n; i++){
+    printf(" ");
+  }
+}
 
 
 

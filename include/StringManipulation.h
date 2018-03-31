@@ -1,17 +1,23 @@
 #ifndef STRINGMANIPULATION_H
 #define STRINGMANIPULATION_H
 
+#include "Highlight.h"
+
 /*Skip whitespace and return the first non-whitespace char you find.*/
 char SkipWhitespace(FILE* fp);
 
-/*Read a stream of char from fp, and append them to the doc string until you find
-whitespace,newline or EOF.
-That last argument is valuable, its the first char we append.
-While appending characters to the doc string,you might get out of its boundaries.
-ReallocDocument() is used to resize our document and update the doc pointer in
-the DMAP.*/
-char AddWord(FILE* fp,char** doc_ptr, int* doc_size, int* char_index, char* c);
+/*Print a document to terminal, make it wrap and highlight the words relevant to
+the querry.*/
+void PrintDocumentToTerminal(char* doc, Highlight* Highlights,int numofHlights);
 
+/*print n char of a doc string.*/
+void PrintChars(char* doc, int* index, int n);
+
+void PrintWhitespace(int n);
+
+int PrintHighlights( int carry, int* hindex, int line_end,
+                      Highlight* Hlights,int* h,int numofHlights);
+                      
 /*
 /*Get the pointer of a word IN the document, that points at the first word
 after offset-many characters*

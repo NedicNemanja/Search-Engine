@@ -20,10 +20,14 @@ int ReadArguments(int argc, char* argv[]){
     }
     else if(!strcmp(argv[arg_index],"-k")){  //next arg_index is k
       K = atoi(argv[++arg_index]);
+      if(K < 1){
+        fprintf(stderr, "K cannot be less than 1.\n");
+        return K_LESS_THAN_ONE;
+      }
       k_flag = 1;
     }
     else{ //this argument should not be here
-      fprintf(stdout, "Unknown argument: %s\n", argv[arg_index]);
+      fprintf(stderr, "Unknown argument: %s\n", argv[arg_index]);
       return UNKNOWN_CMDARGUMENT;
     }
     //next
@@ -32,7 +36,7 @@ int ReadArguments(int argc, char* argv[]){
 
   //check that you got all the arguements
   if(doc_flag == 0){
-    fprintf(stdout, "Specify a file to read documents from.\n"
+    fprintf(stderr, "Specify a file to read documents from.\n"
                     "Example: ./minisearch -i docfile.txt\n");
     return UNSPECIFIED_i;
   }
