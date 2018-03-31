@@ -4,6 +4,7 @@ A search engine implemented in c using a word-level inverted index (Trie).
 A Makefile is provided. (-g is default).
 
 Run the program with ```./minisearch -i [inputfile.txt] -k [num of results to return for each querry]```
+
                   or ```./minisearch -r [inputfile.txt]```      (K is 10 by default)
                
 # Console options:
