@@ -10,7 +10,7 @@ Run the program with
  or
                   
                  
-                  ./minisearch -r [inputfile.txt]     
+                  ./minisearch -i [inputfile.txt]     
 (K is 10 by default).
                
 # Console options:
