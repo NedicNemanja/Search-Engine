@@ -73,3 +73,4 @@ transactions 9
 /tf 37 transaction
 2 transaction
 ```
+In order to calculate the relevance of a document with our querry a score is used based on the [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25).
