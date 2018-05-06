@@ -5,7 +5,7 @@ A Makefile is provided. (-g is default).
 
 Run the program with 
 
-                  ./minisearch -i [inputfile.txt] -k [num of results to return for each querry]
+                  ./minisearch -i [inputfile.txt] -k [num of results to return for each query]
                   
  or
                   
@@ -17,9 +17,9 @@ Run the program with
 
 There are 4 basic commands which you can use:
   ```
-  /search [Querry]
+  /search [Query]
   ```
-  To search the file with a querry
+  To search the file with a query
   ```
   /df
   ```
@@ -73,4 +73,4 @@ transactions 9
 /tf 37 transaction
 2 transaction
 ```
-In order to calculate the relevance of a document with our querry a score is used based on the [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25).
+In order to calculate the relevance of a document with our query a score is used based on the [Okapi BM25](https://en.wikipedia.org/wiki/Okapi_BM25).
